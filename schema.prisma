@@ -1,0 +1,84 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nickname  String
+  pubgId    String   @unique
+  discordId String?  @unique
+  role      String   @default("PLAYER")
+  teams     Team[]
+  createdAt DateTime @default(now())
+}
+
+model Team {
+  id        String                   @id @default(uuid())
+  name      String
+  captainId String
+  captain   User                     @relation(fields: [captainId], references: [id], onDelete: Cascade)
+  members   TeamMember[]
+  regs      TournamentRegistration[]
+  results   MatchResult[]
+}
+
+model TeamMember {
+  id     String @id @default(uuid())
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  pubgId String
+  name   String
+}
+
+model Tournament {
+  id            String                   @id @default(uuid())
+  title         String
+  bannerUrl     String
+  prizePool     String
+  prizeTop1     String
+  prizeTop3     String
+  prizeTop5     String?
+  prizeTop10    String?
+  format        String                   @default("SQUAD")
+  maxTeams      Int                      @default(16)
+  status        String                   @default("REGISTRATION_OPEN")
+  customRoomId  String?
+  customPass    String?
+  startTime     DateTime
+  regs          TournamentRegistration[]
+  matches       Match[]
+}
+
+model TournamentRegistration {
+  id           String     @id @default(uuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  status       String     @default("APPROVED")
+  registeredAt DateTime   @default(now())
+}
+
+model Match {
+  id           String        @id @default(uuid())
+  tournamentId String
+  tournament   Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matchNumber  Int
+  results      MatchResult[]
+}
+
+model MatchResult {
+  id          String @id @default(uuid())
+  matchId     String
+  match       Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId      String
+  team        Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  placement   Int
+  kills       Int
+  totalPoints Int
+}
