@@ -1,48 +1,44 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path'); // Добавляем модуль path
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Базовый маршрут для проверки работы сервера
-app.get('/', (req, res) => {
-    res.send('🚀 Сервер PUBG Arena KG / PlayNomad работает!');
-});
+// 1. Раздаем статические файлы (index.html, css, js) из корня проекта
+app.use(express.static(path.join(__dirname, './')));
 
-// ==========================================
-// 🤖 ИНИЦИАЛИЗАЦИЯ БОТОВ (Discord & Telegram)
-// ==========================================
-
-// 1. Подключаем Discord-бота
+// 2. Инициализируем ботов
 try {
     require('./discordBot.js');
-    console.log('✅ Discord-бот успешно подключен к серверу!');
+    console.log('✅ Discord-бот подключен!');
 } catch (err) {
-    console.error('❌ Ошибка инициализации Discord-бота:', err.message);
+    console.error('❌ Ошибка Discord:', err.message);
 }
 
-// 2. Подключаем Telegram-бота
 try {
     const { bot } = require('./bot.js');
-    console.log('✅ Telegram-бот успешно подключен к серверу!');
+    console.log('✅ Telegram-бот подключен!');
 
-    // Webhook-эндпоинт для Vercel (чтобы Telegram присылал сообщения сразу на сервер)
     app.post(`/api/telegram-webhook`, (req, res) => {
         bot.processUpdate(req.body);
         res.sendStatus(200);
     });
 } catch (err) {
-    console.error('❌ Ошибка инициализации Telegram-бота:', err.message);
+    console.error('❌ Ошибка Telegram:', err.message);
 }
 
-// ==========================================
-// 🌐 ЗАПУСК СЕРВЕРА
-// ==========================================
+// 3. Отправка index.html на любой главный запрос
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`🔥 Сервер запущен на порту ${PORT}`);
+    console.log(`🔥 Сервер работает на порту ${PORT}`);
 });
 
 module.exports = app;
+
