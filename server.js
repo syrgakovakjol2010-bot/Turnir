@@ -1,34 +1,48 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
+require('dotenv').config();
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-// 1. Указываем Vercel точно отдавать статику из папки public
-const publicPath = path.join(process.cwd(), 'public');
-app.use(express.static(publicPath));
-
-// 2. Отдаём index.html на любой главный запрос
+// Базовый маршрут для проверки работы сервера
 app.get('/', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+    res.send('🚀 Сервер PUBG Arena KG / PlayNomad работает!');
 });
 
-// 3. Тестовый роут для проверки работы сервера
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'PUBG ARENA KG Работает!' });
-});
+// ==========================================
+// 🤖 ИНИЦИАЛИЗАЦИЯ БОТОВ (Discord & Telegram)
+// ==========================================
 
-// Если страница не найдена в static, отдаем index.html (для SPA)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
-});
+// 1. Подключаем Discord-бота
+try {
+    require('./discordBot.js');
+    console.log('✅ Discord-бот успешно подключен к серверу!');
+} catch (err) {
+    console.error('❌ Ошибка инициализации Discord-бота:', err.message);
+}
 
+// 2. Подключаем Telegram-бота
+try {
+    const { bot } = require('./bot.js');
+    console.log('✅ Telegram-бот успешно подключен к серверу!');
+
+    // Webhook-эндпоинт для Vercel (чтобы Telegram присылал сообщения сразу на сервер)
+    app.post(`/api/telegram-webhook`, (req, res) => {
+        bot.processUpdate(req.body);
+        res.sendStatus(200);
+    });
+} catch (err) {
+    console.error('❌ Ошибка инициализации Telegram-бота:', err.message);
+}
+
+// ==========================================
+// 🌐 ЗАПУСК СЕРВЕРА
+// ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Сервер запущен на порту ${PORT}`);
+    console.log(`🔥 Сервер запущен на порту ${PORT}`);
 });
 
 module.exports = app;
