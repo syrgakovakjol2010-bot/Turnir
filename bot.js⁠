@@ -1,96 +1,38 @@
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
 
-// Инициализация бота с использованием токена из переменных окружения
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
 if (!token) {
-    console.error('❌ Ошибка: TELEGRAM_BOT_TOKEN не найден в .env');
-    process.exit(1);
+    console.error('❌ TELEGRAM_BOT_TOKEN не найден!');
 }
 
-const bot = new TelegramBot(token, { polling: true });
+// Если работаем на сервере (Vercel) — отключаем polling, иначе включаем
+const isVercel = process.env.VERCEL === '1';
+const bot = new TelegramBot(token, { polling: !isVercel });
 
-console.log('🚀 Бот PlayNomad успешно запущен!');
+console.log(`🚀 Telegram Bot запущен (Режим: ${isVercel ? 'Webhook' : 'Polling'})`);
 
-// ==========================================
-// 1. ОБРАБОТКА КОМАНДЫ /start (С ПАРАМЕТРАМИ И БЕЗ)
-// ==========================================
+// Обработка /start
 bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
-    const parameter = match[1]; // Параметр после /start (если есть)
+    const parameter = match[1];
     const username = msg.from.username ? `@${msg.from.username}` : msg.from.first_name;
 
-    // Сценарий А: Переход по реферальной ссылке (например, /start ref_12345)
-    if (parameter && parameter.startsWith('ref_')) {
-        const referrerId = parameter.replace('ref_', '');
-        
-        await bot.sendMessage(
-            chatId,
-            `🦅 **Добро пожаловать в PlayNomad, ${msg.from.first_name}!**\n\n` +
-            `Ты перешёл по приглашению игрока #${referrerId}.\n` +
-            `Твой Telegram-аккаунт (${username}) успешно зарегистрирован в системе!`,
-            { parse_mode: 'Markdown' }
-        );
-        return;
-    }
-
-    // Сценарий Б: Привязка аккаунта с сайта (например, /start bind_USERID)
     if (parameter && parameter.startsWith('bind_')) {
         const siteUserId = parameter.replace('bind_', '');
-
-        await bot.sendMessage(
+        return bot.sendMessage(
             chatId,
-            `✅ **Аккаунт успешно привязан!**\n\n` +
-            `Профиль на сайте (ID: \`${siteUserId}\`) связан с Telegram: ${username}.`,
+            `✅ **Аккаунт привязан!**\n\nID на сайте: \`${siteUserId}\`\nTelegram: ${username}`,
             { parse_mode: 'Markdown' }
         );
-        return;
     }
 
-    // Сценарий В: Обычный запуск бота без параметров
-    const welcomeMessage = 
-        `👋 **Привет, ${msg.from.first_name}!**\n\n` +
-        `Добро пожаловать в официальный бот платформы **PlayNomad** 🎮\n\n` +
-        `**Что умеет этот бот?**\n` +
-        `• Верифицировать твой аккаунт для участия в турнирах.\n` +
-        `• Выдавать одноразовые ссылки в приватные комнаты турнира.\n` +
-        `• Отправлять уведомления о матчах и сетках.\n\n` +
-        `Для привязки профиля перейди в личный кабинет на нашем сайте.`;
-
-    bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
-});
-
-// ==========================================
-// 2. ГЕНЕРАЦИЯ ОДНОРАЗОВОЙ ССЫЛКИ В ЗАКРЫТЫЙ КАНАЛ
-// ==========================================
-/**
- * Создает одноразовую ссылку-приглашение в Telegram-канал/чат
- * @param {string|number} channelId - ID закрытого канала (например: -100123456789)
- * @returns {Promise<string|null>} - Ссылка на вступление
- */
-async function generateOneTimeInvite(channelId) {
-    try {
-        const invite = await bot.createChatInviteLink(channelId, {
-            member_limit: 1, // Ссылка сработает СТРОГО 1 РАЗ (для 1 капитана)
-            expire_date: Math.floor(Date.now() / 1000) + 3600 // Ссылка сгорит через 60 минут
-        });
-        return invite.invite_link;
-    } catch (error) {
-        console.error(' Ошибка создания одноразовой ссылки:', error.message);
-        return null;
-    }
-}
-
-// ==========================================
-// 3. КОМАНДА /help (ПОМОЩЬ)
-// ==========================================
-bot.onText(/\/help/, (msg) => {
     bot.sendMessage(
-        msg.chat.id,
-        `❓ **Нужна помощь?**\n\nЕсли у тебя возникли проблемы с привязкой аккаунта или входом в турнирный чат, напиши в нашу службу поддержки: @playnomad_support`,
+        chatId,
+        `👋 **Привет, ${msg.from.first_name}!**\n\nДобро пожаловать в **PlayNomad / PUBG Arena KG** 🎮\nБот готов к работе!`,
         { parse_mode: 'Markdown' }
     );
 });
 
-module.exports = { bot, generateOneTimeInvite };
+module.exports = { bot };
